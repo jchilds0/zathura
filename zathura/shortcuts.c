@@ -13,6 +13,7 @@
 #include "shortcuts.h"
 #include "dbus-interface.h"
 #include "document.h"
+#include "glib.h"
 #include "zathura.h"
 #include "render.h"
 #include "utils.h"
@@ -1426,6 +1427,20 @@ bool sc_toggle_presentation(girara_session_t* session, girara_argument_t* UNUSED
   }
 
   return false;
+}
+
+bool sc_toggle_single_mode(girara_session_t* session, girara_argument_t* UNUSED(argument), girara_event_t* UNUSED(event), 
+                           unsigned int UNUSED(t)) {
+  g_return_val_if_fail(session != NULL, false);
+  g_return_val_if_fail(session->global.data != NULL, false);
+  zathura_t* zathura = session->global.data;
+
+  if (zathura->document == NULL) {
+    girara_notify(session, GIRARA_WARNING, _("No document opened."));
+    return false;
+  }
+
+  zathura_document_widget_toggle_single(zathura);
 }
 
 bool sc_quit(girara_session_t* session, girara_argument_t* UNUSED(argument), girara_event_t* UNUSED(event),

@@ -53,6 +53,8 @@ GType zathura_document_widget_get_type(void) G_GNUC_CONST;
  */
 GtkWidget* zathura_document_widget_new(void);
 
+void zathura_document_widget_toggle_single(zathura_t *zathura);
+
 /**
  * Builds the box structure to show the rendered pages
  *
