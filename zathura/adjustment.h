@@ -74,4 +74,7 @@ void page_number_to_position(zathura_document_t* document, unsigned int page_num
  */
 bool page_is_visible(zathura_document_t* document, unsigned int page_number);
 
+gdouble zathura_adjustment_get_ratio(GtkAdjustment* adjustment);
+void zathura_adjustment_set_value_from_ratio(GtkAdjustment* adjustment, gdouble ratio);
+
 #endif /* ZATHURA_ADJUSTMENT_H */

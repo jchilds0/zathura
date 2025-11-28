@@ -354,14 +354,14 @@ bool sc_mouse_scroll(girara_session_t* session, girara_argument_t* argument, gir
     unsigned int doc_height, doc_width;
     zathura_document_get_document_size(zathura->document, &doc_height, &doc_width);
 
-    const double pos_x = zathura_document_widget_get_ratio(zathura, x_adj, true);
-    const double pos_y = zathura_document_widget_get_ratio(zathura, y_adj, false);
+    const double pos_x = zathura_adjustment_get_ratio(x_adj);
+    const double pos_y = zathura_adjustment_get_ratio(y_adj);
 
     const double ratio_x = pos_x - (event->x - zathura->shortcut.mouse.x) / doc_width;
     const double ratio_y = pos_y - (event->y - zathura->shortcut.mouse.y) / doc_height;
 
-    zathura_document_widget_set_value_from_ratio(zathura, x_adj, ratio_x, true);
-    zathura_document_widget_set_value_from_ratio(zathura, y_adj, ratio_y, false);
+    zathura_adjustment_set_value_from_ratio(x_adj, ratio_x);
+    zathura_adjustment_set_value_from_ratio(y_adj, ratio_y);
     break;
 
     /* unhandled events */

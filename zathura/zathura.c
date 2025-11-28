@@ -268,7 +268,7 @@ static bool init_ui(zathura_t* zathura) {
 
   gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(zathura->ui.view), hpolicy, vpolicy);
 
-  zathura->ui.document_widget = zathura_document_widget_new();
+  zathura->ui.document_widget = zathura_document_widget_new(zathura);
   if (zathura->ui.document_widget == NULL) {
     girara_error("Failed to create document widget.");
     return false;
@@ -1159,7 +1159,7 @@ bool document_open(zathura_t* zathura, const char* path, const char* uri, const 
   page_right_to_left = file_info.page_right_to_left;
 
   zathura_document_set_page_layout(document, page_v_padding, page_h_padding, pages_per_row, first_page_column);
-  zathura_document_widget_set_mode(zathura, page_right_to_left);
+  //zathura_document_widget_set_mode(zathura, page_v_padding, page_h_padding, page_right_to_left);
 
   girara_set_view(zathura->ui.session, zathura->ui.view);
 
@@ -1464,7 +1464,7 @@ bool document_close(zathura_t* zathura, bool keep_monitor) {
 #endif
 
   /* remove widgets */
-  zathura_document_widget_clear_pages(zathura->ui.document_widget);
+  //zathura_document_widget_clear_pages(zathura->ui.document_widget);
 
   if (!override_predecessor) {
     for (unsigned int i = 0; i < zathura_document_get_number_of_pages(document); i++) {

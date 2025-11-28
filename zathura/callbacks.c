@@ -98,7 +98,7 @@ void cb_view_hadjustment_value_changed(GtkAdjustment* adjustment, gpointer data)
   update_visible_pages(zathura);
 
   zathura_document_t* document = zathura_get_document(zathura);
-  const double position_x      = zathura_document_widget_get_ratio(zathura, adjustment, true);
+  const double position_x      = zathura_adjustment_get_ratio(adjustment);
   const double position_y      = zathura_document_get_position_y(document);
   unsigned int page_id         = position_to_page_number(document, position_x, position_y);
 
@@ -124,7 +124,7 @@ void cb_view_vadjustment_value_changed(GtkAdjustment* adjustment, gpointer data)
 
   zathura_document_t* document = zathura_get_document(zathura);
   const double position_x      = zathura_document_get_position_x(document);
-  const double position_y      = zathura_document_widget_get_ratio(zathura, adjustment, false);
+  const double position_y      = zathura_adjustment_get_ratio(adjustment);
   const unsigned int page_id   = position_to_page_number(document, position_x, position_y);
 
   zathura_document_set_position_x(document, position_x);
@@ -160,7 +160,7 @@ static void cb_view_adjustment_changed(GtkAdjustment* adjustment, zathura_t* zat
   const double ratio =
       width == true ? zathura_document_get_position_x(document) : zathura_document_get_position_y(document);
 
-  zathura_document_widget_set_value_from_ratio(zathura, adjustment, ratio, width);
+  zathura_adjustment_set_value_from_ratio(adjustment, ratio);
 }
 
 void cb_view_hadjustment_changed(GtkAdjustment* adjustment, gpointer data) {
@@ -205,8 +205,8 @@ void cb_refresh_view(GtkWidget* GIRARA_UNUSED(view), gpointer data) {
   const double position_x = zathura_document_get_position_x(document);
   const double position_y = zathura_document_get_position_y(document);
 
-  zathura_document_widget_set_value_from_ratio(zathura, vadj, position_y, false);
-  zathura_document_widget_set_value_from_ratio(zathura, hadj, position_x, true);
+  zathura_adjustment_set_value_from_ratio(vadj, position_y);
+  zathura_adjustment_set_value_from_ratio(hadj, position_x);
 
   statusbar_page_number_update(zathura);
 }
@@ -324,7 +324,7 @@ void cb_page_layout_value_changed(girara_session_t* session, const char* name, g
 
   zathura_document_set_page_layout(zathura_get_document(zathura), page_v_padding, page_h_padding, pages_per_row,
                                    first_page_column);
-  zathura_document_widget_set_mode(zathura, page_right_to_left);
+  //zathura_document_widget_set_mode(zathura, page_right_to_left);
 }
 
 void cb_index_row_activated(GtkTreeView* tree_view, GtkTreePath* path, GtkTreeViewColumn* UNUSED(column), void* data) {
