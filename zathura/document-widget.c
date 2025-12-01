@@ -197,13 +197,14 @@ static void zathura_document_widget_get_property(GObject* object, guint prop_id,
 }
 
 /* drawing */
-static void zathura_document_widget_line_prefix_sum(document_widget_line_s *array, unsigned int n) {
+static void zathura_document_widget_line_prefix_sum(document_widget_line_s *array, unsigned int n, unsigned int pad) {
   array[0].pos = 0;
 
   for (unsigned int i = 1; i < n; i++) {
-    array[i].pos = array[i - 1].pos + array[i - 1].size;
+    array[i].pos = array[i - 1].pos + array[i - 1].size + pad;
   }
 }
+
 static void zathura_document_widget_arrange_grid(ZathuraDocument* widget) {
   ZathuraDocumentPrivate* priv = zathura_document_widget_get_instance_private(widget);
   zathura_document_t* z_document = zathura_get_document(priv->zathura);
@@ -249,16 +250,16 @@ static void zathura_document_widget_arrange_grid(ZathuraDocument* widget) {
     unsigned int page_width, page_height;
     page_calc_height_width(z_document, height, width, &page_height, &page_width, true);
 
-    priv->row_heights[y].size = MAX(page_height + 2 * page_v_padding, priv->row_heights[y].size);
-    priv->col_widths[x].size  = MAX(page_width + 2 * page_h_padding, priv->col_widths[x].size);
+    priv->row_heights[y].size = MAX(page_height, priv->row_heights[y].size);
+    priv->col_widths[x].size  = MAX(page_width, priv->col_widths[x].size);
 
     // increment row and column
     row += (col + 1) / ncol;
     col = (col + 1) % ncol;
   }
 
-  zathura_document_widget_line_prefix_sum(priv->col_widths, ncol);
-  zathura_document_widget_line_prefix_sum(priv->row_heights, nrow);
+  zathura_document_widget_line_prefix_sum(priv->col_widths, ncol, page_h_padding);
+  zathura_document_widget_line_prefix_sum(priv->row_heights, nrow, page_v_padding);
 }
 
 static void zathura_document_widget_size_allocate(GtkWidget* widget, GtkAllocation* allocation) {
