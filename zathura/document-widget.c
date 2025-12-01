@@ -71,7 +71,7 @@ static void zathura_document_widget_class_init(ZathuraDocumentClass* class) {
                            G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS));
 
   g_object_class_install_property(
-      object_class, PROP_ZATHURA,
+      object_class, PROP_PAGES_LEFT_TO_RIGHT,
       g_param_spec_boolean("pages-left-to-right", "pages-left-to-right", "layout pages left to right", false, 
                            G_PARAM_WRITABLE | G_PARAM_READABLE));
 
@@ -289,6 +289,9 @@ static void zathura_document_widget_size_allocate(GtkWidget* widget, GtkAllocati
   const unsigned int ncol = zathura_document_get_pages_per_row(z_document);
   const unsigned int npag = zathura_document_get_number_of_pages(z_document);
 
+  const unsigned int adj_v = gtk_adjustment_get_value(priv->vadjustment);
+  const unsigned int adj_h = gtk_adjustment_get_value(priv->hadjustment);
+
   unsigned int x, y;
   unsigned int col = c0 - 1;
   unsigned int row = 0;
@@ -308,7 +311,12 @@ static void zathura_document_widget_size_allocate(GtkWidget* widget, GtkAllocati
       gtk_container_add(GTK_CONTAINER(widget), page_widget);
     }
 
-    GtkAllocation page_alloc = {.x = col_line.pos, .y = row_line.pos, .width = col_line.size, .height = row_line.size};
+    GtkAllocation page_alloc = {
+      .x = col_line.pos - adj_h, 
+      .y = row_line.pos - adj_v, 
+      .width = col_line.size, 
+      .height = row_line.size
+    };
 
     gtk_widget_set_child_visible(page_widget, true);
     gtk_widget_size_allocate(page_widget, &page_alloc);
