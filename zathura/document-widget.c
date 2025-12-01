@@ -213,6 +213,9 @@ static void zathura_document_widget_arrange_grid(ZathuraDocument* widget) {
   const unsigned int ncol = zathura_document_get_pages_per_row(z_document);
   const unsigned int nrow = (npag + c0 - 1 + ncol - 1) / ncol;
 
+  const unsigned int page_v_padding = zathura_document_get_page_v_padding(z_document);
+  const unsigned int page_h_padding = zathura_document_get_page_h_padding(z_document);
+
   if (ncol > priv->ncol) {
     g_free(priv->col_widths);
 
@@ -246,8 +249,8 @@ static void zathura_document_widget_arrange_grid(ZathuraDocument* widget) {
     unsigned int page_width, page_height;
     page_calc_height_width(z_document, height, width, &page_height, &page_width, true);
 
-    priv->row_heights[y].size = MAX(page_height, priv->row_heights[y].size);
-    priv->col_widths[x].size  = MAX(page_width, priv->col_widths[x].size);
+    priv->row_heights[y].size = MAX(page_height + 2 * page_v_padding, priv->row_heights[y].size);
+    priv->col_widths[x].size  = MAX(page_width + 2 * page_h_padding, priv->col_widths[x].size);
 
     // increment row and column
     row += (col + 1) / ncol;
