@@ -262,6 +262,24 @@ static void zathura_document_widget_arrange_grid(ZathuraDocument* widget) {
   zathura_document_widget_line_prefix_sum(priv->row_heights, nrow, page_v_padding);
 }
 
+static void zathura_document_widget_get_adjustment(ZathuraDocument* document, int height, int width, int* adj_v, int* adj_h) {
+  ZathuraDocumentPrivate* priv = zathura_document_widget_get_instance_private(document);
+  zathura_document_t* z_document = zathura_get_document(priv->zathura);
+
+  const unsigned int value_v = gtk_adjustment_get_value(priv->vadjustment);
+  const unsigned int value_h = gtk_adjustment_get_value(priv->hadjustment);
+
+  unsigned int doc_height, doc_width;
+  zathura_document_get_document_size(z_document, &doc_height, &doc_width);
+
+  const int center_v = (height - doc_height) / 2;
+  const int center_h = (width - doc_width) / 2;
+
+  // if document is smaller than allocation, center the document
+  *adj_v = ((int)doc_height < height) ? -center_v : value_v;
+  *adj_h = ((int)doc_width < width) ? -center_h : value_h;
+}
+
 static void zathura_document_widget_size_allocate(GtkWidget* widget, GtkAllocation* allocation) {
   ZathuraDocument* document = ZATHURA_DOCUMENT(widget);
   ZathuraDocumentPrivate* priv = zathura_document_widget_get_instance_private(document);
@@ -290,8 +308,8 @@ static void zathura_document_widget_size_allocate(GtkWidget* widget, GtkAllocati
   const unsigned int ncol = zathura_document_get_pages_per_row(z_document);
   const unsigned int npag = zathura_document_get_number_of_pages(z_document);
 
-  const unsigned int adj_v = gtk_adjustment_get_value(priv->vadjustment);
-  const unsigned int adj_h = gtk_adjustment_get_value(priv->hadjustment);
+  int adj_v, adj_h;
+  zathura_document_widget_get_adjustment(document, allocation->height, allocation->width, &adj_v, &adj_h);
 
   unsigned int x, y;
   unsigned int col = c0 - 1;
