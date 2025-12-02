@@ -42,4 +42,12 @@ GType zathura_document_widget_get_type(void) G_GNUC_CONST;
  */
 GtkWidget* zathura_document_widget_new(zathura_t* zathura);
 
+/**
+ * Update internal layout structures when pages-per-row, 
+ * first page column or document changes.
+ *
+ * @param document ZathuraDocument
+ */
+void zathura_document_widget_refresh_layout(ZathuraDocument* document);
+
 #endif // DOCUMENT_WIDGET_H

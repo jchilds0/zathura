@@ -324,7 +324,13 @@ void cb_page_layout_value_changed(girara_session_t* session, const char* name, g
 
   zathura_document_set_page_layout(zathura_get_document(zathura), page_v_padding, page_h_padding, pages_per_row,
                                    first_page_column);
-  //zathura_document_widget_set_mode(zathura, page_right_to_left);
+
+  g_auto(GValue) page_right_to_left_value = G_VALUE_INIT;
+  g_value_init(&page_right_to_left_value, G_TYPE_BOOLEAN);
+  g_value_set_boolean(&page_right_to_left_value, page_right_to_left);
+  g_object_set_property(G_OBJECT(zathura->ui.document_widget), "pages-right-to-left", &page_right_to_left_value);
+
+  zathura_document_widget_refresh_layout(ZATHURA_DOCUMENT(zathura->ui.document_widget));
 }
 
 void cb_index_row_activated(GtkTreeView* tree_view, GtkTreePath* path, GtkTreeViewColumn* UNUSED(column), void* data) {

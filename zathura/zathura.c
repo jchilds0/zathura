@@ -1159,8 +1159,13 @@ bool document_open(zathura_t* zathura, const char* path, const char* uri, const 
   page_right_to_left = file_info.page_right_to_left;
 
   zathura_document_set_page_layout(document, page_v_padding, page_h_padding, pages_per_row, first_page_column);
-  //zathura_document_widget_set_mode(zathura, page_v_padding, page_h_padding, page_right_to_left);
 
+  g_auto(GValue) page_right_to_left_value = G_VALUE_INIT;
+  g_value_init(&page_right_to_left_value, G_TYPE_BOOLEAN);
+  g_value_set_boolean(&page_right_to_left_value, page_right_to_left);
+  g_object_set_property(G_OBJECT(zathura->ui.document_widget), "pages-right-to-left", &page_right_to_left_value);
+
+  zathura_document_widget_refresh_layout(ZATHURA_DOCUMENT(zathura->ui.document_widget));
   girara_set_view(zathura->ui.session, zathura->ui.view);
 
   /* bookmarks */
