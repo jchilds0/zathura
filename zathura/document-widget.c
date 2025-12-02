@@ -311,7 +311,10 @@ static void zathura_document_widget_size_allocate(GtkWidget* widget, GtkAllocati
       .height = row_line.size
     };
 
-    gtk_widget_set_child_visible(page_widget, true);
+    bool x_overlap = (page_alloc.x <= allocation->x + allocation->width && allocation->x <= page_alloc.x + page_alloc.width);
+    bool y_overlap = (page_alloc.y <= allocation->y + allocation->height && allocation->y <= page_alloc.y + page_alloc.height);
+
+    gtk_widget_set_visible(page_widget, x_overlap && y_overlap);
     gtk_widget_size_allocate(page_widget, &page_alloc);
 
     // increment row and column
