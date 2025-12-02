@@ -10,6 +10,7 @@
 #include "utils.h"
 #include "zathura.h"
 #include "zathura/adjustment.h"
+#include "zathura/render.h"
 
 typedef struct {
   unsigned int pos;
@@ -274,6 +275,7 @@ static void zathura_document_widget_size_allocate(GtkWidget* widget, GtkAllocati
   ZathuraDocumentPrivate* priv = zathura_document_widget_get_instance_private(document);
   zathura_document_t* z_document = zathura_get_document(priv->zathura);
 
+  /* update allocation values */
   unsigned int height, width;
   zathura_document_get_document_size(z_document, &height, &width);
 
@@ -283,14 +285,22 @@ static void zathura_document_widget_size_allocate(GtkWidget* widget, GtkAllocati
   gtk_adjustment_set_page_size(priv->hadjustment, allocation->width);
   gtk_adjustment_set_page_size(priv->vadjustment, allocation->height);
 
+  zathura_document_set_viewport_height(z_document, allocation->height);
+  zathura_document_set_viewport_width(z_document, allocation->width);
+
+  /* update view and grid */
+  adjust_view(priv->zathura);
   zathura_document_widget_arrange_grid(document);
 
+  /* allocate page sizes */
   const unsigned int c0   = zathura_document_get_first_page_column(z_document);
   const unsigned int ncol = zathura_document_get_pages_per_row(z_document);
   const unsigned int npag = zathura_document_get_number_of_pages(z_document);
 
   int adj_v, adj_h;
   zathura_document_widget_get_adjustment(document, allocation->height, allocation->width, &adj_v, &adj_h);
+
+  girara_info("document widget size allocate: %d %d", allocation->height, allocation->width);
 
   unsigned int x, y;
   unsigned int col = c0 - 1;
@@ -373,6 +383,9 @@ static void zathura_document_widget_dispose(GObject* object) {
 
   g_free(priv->col_widths);
   g_free(priv->row_heights);
+
+  priv->col_widths = NULL;
+  priv->row_heights = NULL;
 
   G_OBJECT_CLASS(zathura_document_widget_parent_class)->dispose(object);
 }
