@@ -1469,7 +1469,7 @@ bool document_close(zathura_t* zathura, bool keep_monitor) {
 #endif
 
   /* remove widgets */
-  //zathura_document_widget_clear_pages(zathura->ui.document_widget);
+  zathura_document_widget_clear_pages(ZATHURA_DOCUMENT(zathura->ui.document_widget));
 
   if (!override_predecessor) {
     for (unsigned int i = 0; i < zathura_document_get_number_of_pages(document); i++) {

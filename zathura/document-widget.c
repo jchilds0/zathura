@@ -275,6 +275,10 @@ static void zathura_document_widget_size_allocate(GtkWidget* widget, GtkAllocati
   ZathuraDocumentPrivate* priv = zathura_document_widget_get_instance_private(document);
   zathura_document_t* z_document = zathura_get_document(priv->zathura);
 
+  if (z_document == NULL || priv->zathura == NULL) {
+    return;
+  }
+
   /* update allocation values */
   unsigned int height, width;
   zathura_document_get_document_size(z_document, &height, &width);
@@ -299,8 +303,6 @@ static void zathura_document_widget_size_allocate(GtkWidget* widget, GtkAllocati
 
   int adj_v, adj_h;
   zathura_document_widget_get_adjustment(document, allocation->height, allocation->width, &adj_v, &adj_h);
-
-  girara_info("document widget size allocate: %d %d", allocation->height, allocation->width);
 
   unsigned int x, y;
   unsigned int col = c0 - 1;
@@ -417,5 +419,24 @@ void zathura_document_widget_refresh_layout(ZathuraDocument* document) {
 
     gtk_widget_unparent(page_widget);
     gtk_container_add(GTK_CONTAINER(document), page_widget);
+  }
+
+  gtk_widget_set_visible(GTK_WIDGET(document), true);
+  gtk_widget_queue_resize(GTK_WIDGET(document));
+}
+
+void zathura_document_widget_clear_pages(ZathuraDocument *document) {
+  g_return_if_fail(document != NULL);
+
+  ZathuraDocumentPrivate* priv = zathura_document_widget_get_instance_private(document);
+  zathura_document_t* z_document = zathura_get_document(priv->zathura);
+
+  const unsigned int npag = zathura_document_get_number_of_pages(z_document);
+
+  for (unsigned int i = 0; i < npag; i++) {
+    zathura_page_t* page = zathura_document_get_page(z_document, i);
+    GtkWidget* page_widget = zathura_page_get_widget(priv->zathura, page);
+
+    gtk_widget_unparent(page_widget);
   }
 }

@@ -50,4 +50,9 @@ GtkWidget* zathura_document_widget_new(zathura_t* zathura);
  */
 void zathura_document_widget_refresh_layout(ZathuraDocument* document);
 
+/**
+ * Remove page widgets from document.
+ */
+void zathura_document_widget_clear_pages(ZathuraDocument* document);
+
 #endif // DOCUMENT_WIDGET_H
