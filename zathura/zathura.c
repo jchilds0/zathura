@@ -2,6 +2,7 @@
 
 #include "glib-object.h"
 #include "glib.h"
+#include "gtk/gtk.h"
 #include "zathura/document-widget.h"
 #include <errno.h>
 #include <stdlib.h>
