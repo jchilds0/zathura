@@ -57,7 +57,7 @@ void update_visible_pages(zathura_t* zathura) {
     GtkWidget* page_widget           = zathura_page_get_widget(zathura, page);
     ZathuraPage* zathura_page_widget = ZATHURA_PAGE(page_widget);
 
-    if (page_is_visible(document, page_id) == true) {
+    if (page_is_visible(zathura, page_id) == true) {
       /* make page visible */
       if (zathura_page_get_visibility(page) == false) {
         zathura_page_set_visibility(page, true);
@@ -100,7 +100,7 @@ void cb_view_hadjustment_value_changed(GtkAdjustment* adjustment, gpointer data)
   zathura_document_t* document = zathura_get_document(zathura);
   const double position_x      = zathura_adjustment_get_ratio(adjustment);
   const double position_y      = zathura_document_get_position_y(document);
-  unsigned int page_id         = position_to_page_number(document, position_x, position_y);
+  unsigned int page_id         = position_to_page_number(zathura, position_x, position_y);
 
   zathura_document_set_position_x(document, position_x);
   zathura_document_set_position_y(document, position_y);
@@ -125,7 +125,7 @@ void cb_view_vadjustment_value_changed(GtkAdjustment* adjustment, gpointer data)
   zathura_document_t* document = zathura_get_document(zathura);
   const double position_x      = zathura_document_get_position_x(document);
   const double position_y      = zathura_adjustment_get_ratio(adjustment);
-  const unsigned int page_id   = position_to_page_number(document, position_x, position_y);
+  const unsigned int page_id   = position_to_page_number(zathura, position_x, position_y);
 
   zathura_document_set_position_x(document, position_x);
   zathura_document_set_position_y(document, position_y);

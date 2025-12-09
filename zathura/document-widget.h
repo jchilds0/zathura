@@ -50,6 +50,17 @@ GtkWidget* zathura_document_widget_new(zathura_t* zathura);
  */
 void zathura_document_widget_refresh_layout(ZathuraDocument* document);
 
+void zathura_document_widget_get_cell_pos(ZathuraDocument* document, unsigned int page_index, 
+                                          unsigned int* pos_x, unsigned int* pos_y);
+
+void zathura_document_widget_get_cell_size(ZathuraDocument* document, unsigned int page_index, 
+                                           unsigned int* height, unsigned int* width);
+
+void zathura_document_widget_get_line_alloc(ZathuraDocument* document, unsigned int index, bool width, 
+                                            unsigned int* pos, unsigned int* size);
+
+void zathura_document_widget_get_document_size(ZathuraDocument* document, unsigned int* height, unsigned int* width);
+
 /**
  * Remove page widgets from document.
  */

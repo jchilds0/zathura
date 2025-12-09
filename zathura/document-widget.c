@@ -2,15 +2,13 @@
 
 #include "document-widget.h"
 #include "girara/log.h"
-#include "glib-object.h"
-#include "glib.h"
-#include "gtk/gtk.h"
+
 #include "document.h"
 #include "page.h"
 #include "utils.h"
 #include "zathura.h"
-#include "zathura/adjustment.h"
-#include "zathura/render.h"
+#include "adjustment.h"
+#include "zathura/types.h"
 
 typedef struct {
   unsigned int pos;
@@ -201,6 +199,17 @@ static void zathura_document_widget_get_property(GObject* object, guint prop_id,
 }
 
 /* drawing */
+static void zathura_document_widget_get_page_position(ZathuraDocument* document, unsigned int page_index, 
+                                                      unsigned int* row, unsigned int* col) {
+  ZathuraDocumentPrivate* priv = zathura_document_widget_get_instance_private(document);
+  zathura_document_t* z_document = zathura_get_document(priv->zathura);
+
+  const unsigned int c0   = zathura_document_get_first_page_column(z_document);
+  const unsigned int ncol = zathura_document_get_pages_per_row(z_document);
+
+  *row = (page_index + c0 - 1) / ncol;
+  *col = (page_index + c0 - 1) % ncol;
+}
 static void zathura_document_widget_line_prefix_sum(document_widget_line_s *array, unsigned int n, unsigned int pad) {
   array[0].pos = 0;
 
@@ -224,12 +233,12 @@ static void zathura_document_widget_arrange_grid(ZathuraDocument* widget) {
   memset(priv->row_heights, 0, nrow * sizeof( document_widget_line_s ));
   memset(priv->col_widths, 0, ncol * sizeof( document_widget_line_s ));
 
-  unsigned int col = c0 - 1;
-  unsigned int row = 0;
+  unsigned int row, col;
 
   // calculate the max width and height required for each column and row
   for (unsigned int i = 0; i < npag; i++) {
     zathura_page_t* page = zathura_document_get_page(z_document, i);
+    zathura_document_widget_get_page_position(widget, i, &row, &col);
 
     unsigned int x = priv->pages_right_to_left ? priv->ncol - 1 - col : col;
     unsigned int y = row;
@@ -242,25 +251,21 @@ static void zathura_document_widget_arrange_grid(ZathuraDocument* widget) {
 
     priv->row_heights[y].size = MAX(page_height, priv->row_heights[y].size);
     priv->col_widths[x].size  = MAX(page_width, priv->col_widths[x].size);
-
-    // increment row and column
-    row += (col + 1) / ncol;
-    col = (col + 1) % ncol;
   }
 
   zathura_document_widget_line_prefix_sum(priv->col_widths, ncol, page_h_padding);
   zathura_document_widget_line_prefix_sum(priv->row_heights, nrow, page_v_padding);
 }
 
-static void zathura_document_widget_get_adjustment(ZathuraDocument* document, int height, int width, int* adj_v, int* adj_h) {
+static void zathura_document_widget_get_adjustment(ZathuraDocument* document, int height, int width, 
+                                                   int* adj_v, int* adj_h) {
   ZathuraDocumentPrivate* priv = zathura_document_widget_get_instance_private(document);
-  zathura_document_t* z_document = zathura_get_document(priv->zathura);
 
   const unsigned int value_v = gtk_adjustment_get_value(priv->vadjustment);
   const unsigned int value_h = gtk_adjustment_get_value(priv->hadjustment);
 
   unsigned int doc_height, doc_width;
-  zathura_document_get_document_size(z_document, &doc_height, &doc_width);
+  zathura_document_widget_get_document_size(document, &doc_height, &doc_width);
 
   const int center_v = (height - doc_height) / 2;
   const int center_h = (width - doc_width) / 2;
@@ -280,11 +285,11 @@ static void zathura_document_widget_size_allocate(GtkWidget* widget, GtkAllocati
   }
 
   /* update allocation values */
-  unsigned int height, width;
-  zathura_document_get_document_size(z_document, &height, &width);
+  unsigned int doc_height, doc_width;
+  zathura_document_widget_get_document_size(document, &doc_height, &doc_width);
 
-  gtk_adjustment_set_upper(priv->hadjustment, width);
-  gtk_adjustment_set_upper(priv->vadjustment, height);
+  gtk_adjustment_set_upper(priv->hadjustment, doc_width);
+  gtk_adjustment_set_upper(priv->vadjustment, doc_height);
 
   gtk_adjustment_set_page_size(priv->hadjustment, allocation->width);
   gtk_adjustment_set_page_size(priv->vadjustment, allocation->height);
@@ -297,20 +302,17 @@ static void zathura_document_widget_size_allocate(GtkWidget* widget, GtkAllocati
   zathura_document_widget_arrange_grid(document);
 
   /* allocate page sizes */
-  const unsigned int c0   = zathura_document_get_first_page_column(z_document);
-  const unsigned int ncol = zathura_document_get_pages_per_row(z_document);
   const unsigned int npag = zathura_document_get_number_of_pages(z_document);
 
   int adj_v, adj_h;
   zathura_document_widget_get_adjustment(document, allocation->height, allocation->width, &adj_v, &adj_h);
 
-  unsigned int x, y;
-  unsigned int col = c0 - 1;
-  unsigned int row = 0;
+  unsigned int x, y, row, col;
 
   for (unsigned int i = 0; i < npag; i++) {
     zathura_page_t* page = zathura_document_get_page(z_document, i);
     GtkWidget* page_widget = zathura_page_get_widget(priv->zathura, page);
+    zathura_document_widget_get_page_position(document, i, &row, &col);
 
     x = priv->pages_right_to_left ? priv->ncol - 1 - col : col;
     y = row;
@@ -338,10 +340,6 @@ static void zathura_document_widget_size_allocate(GtkWidget* widget, GtkAllocati
 
     gtk_widget_set_visible(page_widget, x_overlap && y_overlap);
     gtk_widget_size_allocate(page_widget, &page_alloc);
-
-    // increment row and column
-    row += (col + 1) / ncol;
-    col = (col + 1) % ncol;
   }
 
   GTK_WIDGET_CLASS(zathura_document_widget_parent_class)->size_allocate(widget, allocation);
@@ -425,7 +423,91 @@ void zathura_document_widget_refresh_layout(ZathuraDocument* document) {
   gtk_widget_queue_resize(GTK_WIDGET(document));
 }
 
-void zathura_document_widget_clear_pages(ZathuraDocument *document) {
+void zathura_document_widget_get_line_alloc(ZathuraDocument* document, unsigned int index, bool width,
+                                            unsigned int* pos, unsigned int* size) {
+  g_return_if_fail(document != NULL && pos != NULL && size != NULL);
+  ZathuraDocumentPrivate* priv = zathura_document_widget_get_instance_private(document);
+
+  if (priv->col_widths == NULL || priv->row_heights == NULL) {
+    return;
+  }
+
+  if (width && index >= priv->ncol) {
+    girara_warning("tried to get line alloc for col %d, document has %d cols", index, priv->ncol);
+    return;
+  } else if (index >= priv->nrow) {
+    girara_warning("tried to get line alloc for row %d, document has %d rows", index, priv->nrow);
+    return;
+  }
+
+  document_widget_line_s line = width ? priv->col_widths[index] : priv->row_heights[index];
+
+  *pos = line.pos;
+  *size = line.size;
+}
+
+void zathura_document_widget_get_cell_pos(ZathuraDocument* document, unsigned int page_index, 
+                                          unsigned int* pos_x, unsigned int* pos_y) {
+  g_return_if_fail(document != NULL && pos_x != NULL && pos_y != NULL);
+  ZathuraDocumentPrivate* priv = zathura_document_widget_get_instance_private(document);
+  zathura_document_t* z_document = zathura_get_document(priv->zathura);
+
+  if (priv->col_widths == NULL || priv->row_heights == NULL) {
+    return;
+  }
+
+  const unsigned int npag = zathura_document_get_number_of_pages(z_document);
+  if (page_index >= npag) {
+    girara_warning("tried to get cell size for page %d, document has %d pages", page_index, npag);
+    return;
+  }
+
+  unsigned int row, col;
+  zathura_document_widget_get_page_position(document, page_index, &row, &col);
+
+  *pos_x = priv->col_widths[col].pos;
+  *pos_y = priv->row_heights[row].pos;
+}
+
+void zathura_document_widget_get_cell_size(ZathuraDocument* document, unsigned int page_index, 
+                                           unsigned int* height, unsigned int* width) {
+  g_return_if_fail(document != NULL && height != NULL && width != NULL);
+  ZathuraDocumentPrivate* priv = zathura_document_widget_get_instance_private(document);
+  zathura_document_t* z_document = zathura_get_document(priv->zathura);
+
+  if (priv->col_widths == NULL || priv->row_heights == NULL) {
+    return;
+  }
+
+  const unsigned int npag = zathura_document_get_number_of_pages(z_document);
+  if (page_index >= npag) {
+    girara_warning("tried to get cell size for page %d, document has %d pages", page_index, npag);
+    return;
+  }
+
+  unsigned int row, col;
+  zathura_document_widget_get_page_position(document, page_index, &row, &col);
+
+  *height = priv->row_heights[row].size;
+  *width = priv->col_widths[col].size;
+}
+
+void zathura_document_widget_get_document_size(ZathuraDocument* document, unsigned int* height, unsigned int* width) {
+  g_return_if_fail(document != NULL && height != NULL && width != NULL);
+  ZathuraDocumentPrivate* priv = zathura_document_widget_get_instance_private(document);
+
+  if (priv->col_widths == NULL || priv->row_heights == NULL) {
+    return;
+  }
+
+  document_widget_line_s last_row = priv->row_heights[priv->nrow - 1];
+  document_widget_line_s last_col = priv->col_widths[priv->ncol - 1];
+
+  *height = last_row.pos + last_row.size;
+  *width = last_col.pos + last_col.size;
+}
+
+void zathura_document_widget_clear_pages(ZathuraDocument* document) {
   g_return_if_fail(document != NULL);
 
   ZathuraDocumentPrivate* priv = zathura_document_widget_get_instance_private(document);
