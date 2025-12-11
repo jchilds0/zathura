@@ -284,6 +284,8 @@ static void zathura_document_widget_size_allocate(GtkWidget* widget, GtkAllocati
     return;
   }
 
+  girara_info("size allocate");
+
   /* update allocation values */
   unsigned int doc_height, doc_width;
   zathura_document_widget_get_document_size(document, &doc_height, &doc_width);

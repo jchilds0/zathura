@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: Zlib */
 
 #include "adjustment.h"
+#include "girara/log.h"
 #include "utils.h"
 #include "zathura/document-widget.h"
 #include "zathura/zathura.h"
@@ -52,36 +53,30 @@ unsigned int position_to_page_number(zathura_t* zathura, double pos_x, double po
 
   zathura_document_t* document = zathura_get_document(zathura);
   g_return_val_if_fail(document != NULL, 0);
+ 
+  unsigned int doc_width, doc_height;
+  zathura_document_widget_get_document_size(ZATHURA_DOCUMENT(zathura->ui.document_widget), &doc_height, &doc_width);
+ 
+  unsigned int cell_width, cell_height;
+  zathura_document_widget_get_cell_size(ZATHURA_DOCUMENT(zathura->ui.document_widget), 0, &cell_height, &cell_width);
 
-  const unsigned int c0   = zathura_document_get_first_page_column(document);
-  const unsigned int npag = zathura_document_get_number_of_pages(document);
-  const unsigned int ncol = zathura_document_get_pages_per_row(document);
-  const unsigned int nrow = (npag + c0 - 1 + ncol - 1) / ncol;
+  unsigned int c0        = zathura_document_get_first_page_column(document);
+  unsigned int npag      = zathura_document_get_number_of_pages(document);
+  unsigned int ncol      = zathura_document_get_pages_per_row(document);
+  unsigned int nrow      = 0;
+  unsigned int v_padding = zathura_document_get_page_v_padding(document);
+  unsigned int h_padding = zathura_document_get_page_h_padding(document);
 
-  unsigned int row = nrow - 1;
-  unsigned int col = ncol - 1;
-
-  // If this is too slow for large documents it 
-  // could be replaced with binary search
-  for (unsigned int i = 0; i < nrow; i++) {
-    unsigned int pos, size;
-    zathura_document_widget_get_line_alloc(ZATHURA_DOCUMENT(zathura->ui.document_widget), i, false, &pos, &size);
-
-    if (pos_y < pos) {
-      row = i;
-      break;
-    }
+  if (c0 == 1) {
+    /* There is no offset, so this is easy. */
+    nrow = (npag + ncol - 1) / ncol;
+  } else {
+    /* If there is a offset, we handle the first row extra. */
+    nrow = 1 + (npag - (ncol - c0 - 1) + (ncol - 1)) / ncol;
   }
-
-  for (unsigned int i = 0; i < ncol; i++) {
-    unsigned int pos, size;
-    zathura_document_widget_get_line_alloc(ZATHURA_DOCUMENT(zathura->ui.document_widget), i, true, &pos, &size);
-
-    if (pos_x < pos) {
-      col = i;
-      break;
-    }
-  }
+ 
+  unsigned int col = floor(pos_x * (double)doc_width / (double)(cell_width + h_padding));
+  unsigned int row = floor(pos_y * (double)doc_height / (double)(cell_height + v_padding));
 
   unsigned int page = ncol * (row % nrow) + (col % ncol);
   if (page < c0 - 1) {

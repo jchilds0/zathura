@@ -1690,26 +1690,24 @@ bool adjust_view(zathura_t* zathura) {
 
   /* save new zoom and recompute cell size */
   zathura_document_set_zoom(document, newzoom);
-  render_all(zathura);
-  refresh_view(zathura);
 
-  // unsigned int new_cell_height = 0, new_cell_width = 0;
-  // zathura_document_get_cell_size(document, &new_cell_height, &new_cell_width);
-  //
-  // /*
-  //  * XXX requiring a larger difference apparently circumvents #94 for some users; this is not a
-  //  * proper fix
-  //  */
-  // static const int min_change = 2;
-  // /* if the change in zoom changes page cell dimensions, render */
-  // if (abs((int)new_cell_width - (int)cell_width) > min_change ||
-  //     abs((int)new_cell_height - (int)cell_height) > min_change) {
-  //   render_all(zathura);
-  //   refresh_view(zathura);
-  // } else {
-  //   /* otherwise set the old zoom and leave */
-  //   zathura_document_set_zoom(document, zoom);
-  // }
+  unsigned int new_cell_height = 0, new_cell_width = 0;
+  zathura_document_widget_get_cell_size(ZATHURA_DOCUMENT(zathura->ui.document_widget), current_page, &new_cell_height, &new_cell_width);
+
+  /*
+   * XXX requiring a larger difference apparently circumvents #94 for some users; this is not a
+   * proper fix
+   */
+  static const int min_change = 2;
+  /* if the change in zoom changes page cell dimensions, render */
+  if (abs((int)new_cell_width - (int)cell_width) > min_change ||
+      abs((int)new_cell_height - (int)cell_height) > min_change) {
+    render_all(zathura);
+    refresh_view(zathura);
+  } else {
+    /* otherwise set the old zoom and leave */
+    zathura_document_set_zoom(document, zoom);
+  }
 
 error_ret:
   return false;
