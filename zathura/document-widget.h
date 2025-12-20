@@ -50,6 +50,8 @@ GtkWidget* zathura_document_widget_new(zathura_t* zathura);
  */
 void zathura_document_widget_refresh_layout(ZathuraDocument* document);
 
+void zathura_document_widget_compute_layout(ZathuraDocument* document);
+
 void zathura_document_widget_get_cell_pos(ZathuraDocument* document, unsigned int page_index, 
                                           unsigned int* pos_x, unsigned int* pos_y);
 

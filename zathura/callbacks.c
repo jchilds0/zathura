@@ -506,22 +506,6 @@ error_ret:
   return false;
 }
 
-gboolean cb_view_resized(GtkWidget* UNUSED(widget), GtkAllocation* UNUSED(allocation), zathura_t* zathura) {
-  if (zathura_has_document(zathura) == false) {
-    return false;
-  }
-
-  /* adjust the scale according to settings. If nothing needs to be resized,
-     it does not trigger the resize event.
-
-     The right viewport size is already in the document object, due to a
-     previous call to adjustment_changed. We don't want to use the allocation in
-     here, because we would have to subtract scrollbars, etc. */
-  adjust_view(zathura);
-
-  return false;
-}
-
 void cb_setting_recolor_change(girara_session_t* session, const char* name, girara_setting_type_t UNUSED(type),
                                const void* value, void* UNUSED(data)) {
   g_return_if_fail(value != NULL);

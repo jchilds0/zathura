@@ -277,8 +277,6 @@ static bool init_ui(zathura_t* zathura) {
   gtk_container_add(GTK_CONTAINER(zathura->ui.view), zathura->ui.document_widget);
   girara_set_view(zathura->ui.session, zathura->ui.view);
 
-  g_signal_connect(G_OBJECT(zathura->ui.session->gtk.window), "size-allocate", G_CALLBACK(cb_view_resized), zathura);
-
   GtkAdjustment* hadjustment = gtk_scrolled_window_get_hadjustment(GTK_SCROLLED_WINDOW(zathura->ui.view));
 
   /* Connect hadjustment signals */
@@ -1690,9 +1688,11 @@ bool adjust_view(zathura_t* zathura) {
 
   /* save new zoom and recompute cell size */
   zathura_document_set_zoom(document, newzoom);
+  zathura_document_widget_compute_layout(ZATHURA_DOCUMENT(zathura->ui.document_widget));
 
   unsigned int new_cell_height = 0, new_cell_width = 0;
-  zathura_document_widget_get_cell_size(ZATHURA_DOCUMENT(zathura->ui.document_widget), current_page, &new_cell_height, &new_cell_width);
+  zathura_document_widget_get_cell_size(ZATHURA_DOCUMENT(zathura->ui.document_widget), 
+                                        current_page, &new_cell_height, &new_cell_width);
 
   /*
    * XXX requiring a larger difference apparently circumvents #94 for some users; this is not a
@@ -1707,6 +1707,7 @@ bool adjust_view(zathura_t* zathura) {
   } else {
     /* otherwise set the old zoom and leave */
     zathura_document_set_zoom(document, zoom);
+    zathura_document_widget_compute_layout(ZATHURA_DOCUMENT(zathura->ui.document_widget));
   }
 
 error_ret:
