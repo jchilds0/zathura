@@ -50,21 +50,71 @@ GtkWidget* zathura_document_widget_new(zathura_t* zathura);
  */
 void zathura_document_widget_refresh_layout(ZathuraDocument* document);
 
+/**
+ * Calculate the position of each grid cell.
+ * Required when any page size is changed.
+ *
+ * @param document ZathuraDocument
+ */
 void zathura_document_widget_compute_layout(ZathuraDocument* document);
 
+/**
+ * The pixel offset of a page cell.
+ *
+ * @param document   ZathuraDocument
+ * @param page_index index of the page
+ * @return pos_x     pixel offset in the x direction
+ * @return pos_y     pixel offset in the y direction
+ */
 void zathura_document_widget_get_cell_pos(ZathuraDocument* document, unsigned int page_index, 
                                           unsigned int* pos_x, unsigned int* pos_y);
 
+/**
+ * The size allocated to a page cell.
+ *
+ * @param document   ZathuraDocument
+ * @param page_index index of the page
+ * @return height    cell height
+ * @return width     cell width
+ */
 void zathura_document_widget_get_cell_size(ZathuraDocument* document, unsigned int page_index, 
                                            unsigned int* height, unsigned int* width);
 
-void zathura_document_widget_get_line_alloc(ZathuraDocument* document, unsigned int index, bool width, 
-                                            unsigned int* pos, unsigned int* size);
+/**
+ * The position and size of a row in the document widget.
+ *
+ * @param document   ZathuraDocument
+ * @param row        row number, indexed from 0.
+ * @return pos       pixel offset
+ * @return size      row size
+ */
+void zathura_document_widget_get_row(ZathuraDocument* document, unsigned int row, 
+                                     unsigned int* pos, unsigned int* size);
 
+/**
+ * The position and size of a column in the document widget.
+ *
+ * @param document   ZathuraDocument
+ * @param col        column number, indexed from 0.
+ * @return pos       pixel offset
+ * @return size      col size
+ */
+void zathura_document_widget_get_col(ZathuraDocument* document, unsigned int col, 
+                                     unsigned int* pos, unsigned int* size);
+
+/**
+ * The size of the document widget.
+ *
+ * @param document ZathuraDocument
+ * @return height  document height in pixels
+ * @return width   document width in pixels
+ */
 void zathura_document_widget_get_document_size(ZathuraDocument* document, unsigned int* height, unsigned int* width);
 
 /**
  * Remove page widgets from document.
+ *
+ * @param document ZathuraDocument
  */
 void zathura_document_widget_clear_pages(ZathuraDocument* document);
 

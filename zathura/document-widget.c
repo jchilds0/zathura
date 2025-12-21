@@ -431,29 +431,6 @@ void zathura_document_widget_compute_layout(ZathuraDocument* document) {
   gtk_adjustment_set_upper(priv->vadjustment, doc_height);
 }
 
-void zathura_document_widget_get_line_alloc(ZathuraDocument* document, unsigned int index, bool width,
-                                            unsigned int* pos, unsigned int* size) {
-  g_return_if_fail(document != NULL && pos != NULL && size != NULL);
-  ZathuraDocumentPrivate* priv = zathura_document_widget_get_instance_private(document);
-
-  if (priv->col_widths == NULL || priv->row_heights == NULL) {
-    return;
-  }
-
-  if (width && index >= priv->ncol) {
-    girara_warning("tried to get line alloc for col %d, document has %d cols", index, priv->ncol);
-    return;
-  } else if (index >= priv->nrow) {
-    girara_warning("tried to get line alloc for row %d, document has %d rows", index, priv->nrow);
-    return;
-  }
-
-  document_widget_line_s line = width ? priv->col_widths[index] : priv->row_heights[index];
-
-  *pos = line.pos;
-  *size = line.size;
-}
-
 void zathura_document_widget_get_cell_pos(ZathuraDocument* document, unsigned int page_index, 
                                           unsigned int* pos_x, unsigned int* pos_y) {
   g_return_if_fail(document != NULL && pos_x != NULL && pos_y != NULL);
@@ -498,6 +475,42 @@ void zathura_document_widget_get_cell_size(ZathuraDocument* document, unsigned i
 
   *height = priv->row_heights[row].size;
   *width = priv->col_widths[col].size;
+}
+
+void zathura_document_widget_get_row(ZathuraDocument* document, unsigned int row, 
+                                     unsigned int* pos, unsigned int* size) {
+  g_return_if_fail(document != NULL && pos != NULL && size != NULL);
+  ZathuraDocumentPrivate* priv = zathura_document_widget_get_instance_private(document);
+
+  if (priv->col_widths == NULL || priv->row_heights == NULL) {
+    return;
+  }
+
+  if (row >= priv->nrow) {
+    girara_warning("tried to get row %d size, document has %d rows", row, priv->nrow);
+    return;
+  }
+
+  *pos  = priv->row_heights[row].pos;
+  *size = priv->row_heights[row].size;
+}
+
+void zathura_document_widget_get_col(ZathuraDocument* document, unsigned int col, 
+                                     unsigned int* pos, unsigned int* size) {
+  g_return_if_fail(document != NULL && pos != NULL && size != NULL);
+  ZathuraDocumentPrivate* priv = zathura_document_widget_get_instance_private(document);
+
+  if (priv->col_widths == NULL || priv->row_heights == NULL) {
+    return;
+  }
+
+  if (col >= priv->ncol) {
+    girara_warning("tried to get col %d size, document has %d columns", col, priv->ncol);
+    return;
+  }
+
+  *pos  = priv->col_widths[col].pos;
+  *size = priv->col_widths[col].size;
 }
 
 void zathura_document_widget_get_document_size(ZathuraDocument* document, unsigned int* height, unsigned int* width) {
