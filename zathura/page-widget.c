@@ -904,11 +904,18 @@ static void cb_cache_invalidated(ZathuraRenderRequest* UNUSED(request), void* da
 }
 
 static void zathura_page_widget_size_allocate(GtkWidget* widget, GdkRectangle* allocation) {
+  int width  = gtk_widget_get_allocated_width(widget);
+  int height = gtk_widget_get_allocated_height(widget);
+
   GTK_WIDGET_CLASS(zathura_page_widget_parent_class)->size_allocate(widget, allocation);
 
   ZathuraPage* page = ZATHURA_PAGE(widget);
   zathura_page_widget_abort_render_request(page);
-  zathura_page_widget_update_surface(page, NULL, true);
+
+  bool update_surface = (width != allocation->width || height != allocation->height);
+  if (update_surface) {
+    zathura_page_widget_update_surface(page, NULL, true);
+  }
 }
 
 static void redraw_rect(ZathuraPage* widget, zathura_rectangle_t* rectangle) {
