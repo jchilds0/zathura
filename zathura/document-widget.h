@@ -10,11 +10,11 @@
  * The document view widget.
  */
 struct zathura_document_widget_s {
-  GtkContainer parent;
+  GtkWidget parent;
 };
 
 struct zathura_document_widget_class_s {
-  GtkContainerClass parent_class;
+  GtkWidgetClass parent_class;
 };
 
 #define ZATHURA_TYPE_DOCUMENT_WIDGET (zathura_document_widget_get_type())

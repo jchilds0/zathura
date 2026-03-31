@@ -38,17 +38,13 @@ typedef struct zathura_document_widget_private_s {
   GtkScrollablePolicy vscroll_policy;
 } ZathuraDocumentWidgetPrivate;
 
-G_DEFINE_TYPE_WITH_CODE(ZathuraDocumentWidget, zathura_document_widget, GTK_TYPE_CONTAINER,
+G_DEFINE_TYPE_WITH_CODE(ZathuraDocumentWidget, zathura_document_widget, GTK_TYPE_WIDGET,
                         G_ADD_PRIVATE(ZathuraDocumentWidget) G_IMPLEMENT_INTERFACE(GTK_TYPE_SCROLLABLE, NULL))
 
 static void zathura_document_widget_set_property(GObject* object, guint prop_id, const GValue* value,
                                                  GParamSpec* pspec);
 static void zathura_document_widget_get_property(GObject* object, guint prop_id, GValue* value, GParamSpec* pspec);
-static void zathura_document_widget_size_allocate(GtkWidget* widget, GtkAllocation* allocation);
-static void zathura_document_widget_container_add(GtkContainer* container, GtkWidget* widget);
-static void zathura_document_widget_container_remove(GtkContainer* container, GtkWidget* widget);
-static void zathura_document_widget_container_forall(GtkContainer* container, gboolean include_internals,
-                                                     GtkCallback callback, gpointer user_data);
+static void zathura_document_widget_size_allocate(GtkWidget* widget, int width, int height, int baseline);
 static void zathura_document_widget_dispose(GObject* object);
 static void zathura_document_widget_finalize(GObject* object);
 
@@ -73,11 +69,6 @@ static void zathura_document_widget_class_init(ZathuraDocumentWidgetClass* class
   object_class->dispose      = zathura_document_widget_dispose;
   object_class->finalize     = zathura_document_widget_finalize;
 
-  GtkContainerClass* container_class = GTK_CONTAINER_CLASS(class);
-  container_class->add               = zathura_document_widget_container_add;
-  container_class->remove            = zathura_document_widget_container_remove;
-  container_class->forall            = zathura_document_widget_container_forall;
-
   g_object_class_install_property(
       object_class, PROP_ZATHURA,
       g_param_spec_pointer("zathura", "zathura", "the zathura instance",
@@ -100,8 +91,6 @@ static void zathura_document_widget_class_init(ZathuraDocumentWidgetClass* class
 }
 
 static void zathura_document_widget_init(ZathuraDocumentWidget* widget) {
-  gtk_widget_set_has_window(GTK_WIDGET(widget), false);
-
   ZathuraDocumentWidgetPrivate* priv = zathura_document_widget_get_instance_private(widget);
 
   priv->zathura     = NULL;
@@ -335,16 +324,14 @@ static void page_allocation(ZathuraDocumentWidget* document, int page_id, int he
   page_alloc->height = MAX(page_height, height);
 }
 
-static void size_allocate_grid(ZathuraDocumentWidget* document, GtkAllocation* allocation) {
+static void size_allocate_grid(ZathuraDocumentWidget* document, int width, int height, int baseline) {
   ZathuraDocumentWidgetPrivate* priv = zathura_document_widget_get_instance_private(document);
   zathura_document_t* z_document     = zathura_get_document(priv->zathura);
 
   const unsigned int npag = zathura_document_get_number_of_pages(z_document);
 
-  gtk_widget_show_all(GTK_WIDGET(document));
-
   int adj_v, adj_h;
-  document_adjustment(document, allocation->height, allocation->width, &adj_v, &adj_h);
+  document_adjustment(document, height, width, &adj_v, &adj_h);
 
   for (unsigned int i = 0; i < npag; i++) {
     zathura_page_t* page   = zathura_document_get_page(z_document, i);
@@ -367,11 +354,11 @@ static void size_allocate_grid(ZathuraDocumentWidget* document, GtkAllocation* a
         .height = row_line.size,
     };
 
-    gtk_widget_size_allocate(page_widget, &page_alloc);
+    gtk_widget_size_allocate(page_widget, &page_alloc, baseline);
   }
 }
 
-static void size_allocate_single_page(ZathuraDocumentWidget* document, GtkAllocation* allocation) {
+static void size_allocate_single_page(ZathuraDocumentWidget* document, int width, int height, int baseline) {
   ZathuraDocumentWidgetPrivate* priv = zathura_document_widget_get_instance_private(document);
   zathura_document_t* z_document     = zathura_get_document(priv->zathura);
 
@@ -379,7 +366,7 @@ static void size_allocate_single_page(ZathuraDocumentWidget* document, GtkAlloca
   const unsigned int page_id = zathura_document_get_current_page_number(z_document);
 
   GtkAllocation page_alloc;
-  page_allocation(document, page_id, allocation->height, allocation->width, &page_alloc);
+  page_allocation(document, page_id, height, width, &page_alloc);
 
   for (unsigned int i = 0; i < npag; i++) {
     zathura_page_t* page   = zathura_document_get_page(z_document, i);
@@ -388,12 +375,12 @@ static void size_allocate_single_page(ZathuraDocumentWidget* document, GtkAlloca
     gtk_widget_set_visible(page_widget, page_id == i);
 
     if (i == page_id) {
-      gtk_widget_size_allocate(page_widget, &page_alloc);
+      gtk_widget_size_allocate(page_widget, &page_alloc, baseline);
     }
   }
 }
 
-static void zathura_document_widget_size_allocate(GtkWidget* widget, GtkAllocation* allocation) {
+static void zathura_document_widget_size_allocate(GtkWidget* widget, int width, int height, int baseline) {
   ZathuraDocumentWidget* document    = ZATHURA_DOCUMENT_WIDGET(widget);
   ZathuraDocumentWidgetPrivate* priv = zathura_document_widget_get_instance_private(document);
   zathura_document_t* z_document     = zathura_get_document(priv->zathura);
@@ -402,59 +389,27 @@ static void zathura_document_widget_size_allocate(GtkWidget* widget, GtkAllocati
     return;
   }
 
-  gtk_adjustment_set_page_size(priv->hadjustment, allocation->width);
-  gtk_adjustment_set_page_size(priv->vadjustment, allocation->height);
+  gtk_adjustment_set_page_size(priv->hadjustment, width);
+  gtk_adjustment_set_page_size(priv->vadjustment, height);
 
-  zathura_document_set_viewport_height(z_document, allocation->height);
-  zathura_document_set_viewport_width(z_document, allocation->width);
+  zathura_document_set_viewport_height(z_document, height);
+  zathura_document_set_viewport_width(z_document, width);
 
   adjust_view(priv->zathura);
 
   /* allocate pages */
   switch (priv->layout_mode) {
   case DOCUMENT_WIDGET_GRID:
-    size_allocate_grid(document, allocation);
+    size_allocate_grid(document, width, height, baseline);
     break;
   case DOCUMENT_WIDGET_SINGLE:
-    size_allocate_single_page(document, allocation);
+    size_allocate_single_page(document, width, height, baseline);
     break;
   default:
     girara_error("unknown layout mode");
   }
 
-  GTK_WIDGET_CLASS(zathura_document_widget_parent_class)->size_allocate(widget, allocation);
-}
-
-/* container class funcs */
-
-static void zathura_document_widget_container_add(GtkContainer* container, GtkWidget* widget) {
-  GtkWidget* parent = gtk_widget_get_parent(widget);
-  if (parent != NULL) {
-    girara_warning("page widget is already added to a document widget");
-    return;
-  }
-
-  gtk_widget_set_parent(widget, GTK_WIDGET(container));
-}
-
-static void zathura_document_widget_container_remove(GtkContainer* UNUSED(container), GtkWidget* widget) {
-  gtk_widget_unparent(widget);
-}
-
-static void zathura_document_widget_container_forall(GtkContainer* container, gboolean UNUSED(include_internals),
-                                                     GtkCallback callback, gpointer user_data) {
-  ZathuraDocumentWidget* document    = ZATHURA_DOCUMENT_WIDGET(container);
-  ZathuraDocumentWidgetPrivate* priv = zathura_document_widget_get_instance_private(document);
-
-  zathura_document_t* z_document = zathura_get_document(priv->zathura);
-  unsigned int npag              = zathura_document_get_number_of_pages(z_document);
-
-  for (unsigned int i = 0; i < npag; i++) {
-    zathura_page_t* page   = zathura_document_get_page(z_document, i);
-    GtkWidget* page_widget = zathura_page_get_widget(priv->zathura, page);
-
-    callback(page_widget, user_data);
-  }
+  GTK_WIDGET_CLASS(zathura_document_widget_parent_class)->size_allocate(widget, width, height, baseline);
 }
 
 static void zathura_document_widget_dispose(GObject* object) {
@@ -513,7 +468,7 @@ void zathura_document_widget_refresh_layout(ZathuraDocumentWidget* document) {
     GtkWidget* page_widget = zathura_page_get_widget(priv->zathura, page);
 
     gtk_widget_unparent(page_widget);
-    gtk_container_add(GTK_CONTAINER(document), page_widget);
+    gtk_widget_set_parent(GTK_WIDGET(document), page_widget);
   }
 
   zathura_document_widget_compute_layout(document);
