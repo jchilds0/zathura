@@ -56,6 +56,15 @@ struct girara_session_s {
   } global;
 
   struct {
+    GtkEventController* view_key_event;         /**< View Key Event Controller */
+    GtkGesture* view_button_event;              /**< View Button Gestures */
+    GtkEventController* view_motion_event;      /**< View Motion Event Controller */
+    GtkEventController* view_scroll_event;      /**< View Scroll Event Controller */
+    GtkEventController* inputbar_key_event;     /**< Inputbar Key Event Controller */
+    GtkEventController* notification_key_event; /**< Notification Area Event Controller */
+  } controller;
+
+  struct {
     girara_callback_inputbar_activate_t inputbar_custom_activate;               /**< Custom handler */
     girara_callback_inputbar_key_press_event_t inputbar_custom_key_press_event; /**< Custom handler */
     void* inputbar_custom_data;                                                 /**< Data for custom handler */

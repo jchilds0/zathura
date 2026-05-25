@@ -5,6 +5,7 @@
 #include "callbacks.h"
 #include "commands.h"
 #include "config.h"
+#include "gtk/gtk.h"
 #include "resources.h"
 #include "internal.h"
 #include "settings.h"
@@ -351,28 +352,37 @@ bool girara_session_init(girara_session_t* session, const char* sessionname) {
   gtk_window_set_geometry_hints(GTK_WINDOW(session->gtk.window), NULL, &hints, GDK_HINT_MIN_SIZE);
 
   /* view */
-  session->signals.view_key_pressed = g_signal_connect(G_OBJECT(session->gtk.view), "key-press-event",
-                                                       G_CALLBACK(girara_callback_view_key_press_event), session);
+  session->controller.view_key_event = gtk_event_controller_key_new(session->gtk.view);
+  session->signals.view_key_pressed  = g_signal_connect(session->controller.view_key_event, "key-pressed",
+                                                        G_CALLBACK(girara_callback_view_key_press_event), session);
 
-  session->signals.view_button_press_event = g_signal_connect(
-      G_OBJECT(session->gtk.view), "button-press-event", G_CALLBACK(girara_callback_view_button_press_event), session);
+  // GTK4: GtkGestureMultiPress renamed to GtkGestureClick
+  session->controller.view_button_event = gtk_gesture_multi_press_new(session->gtk.view);
+  gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(session->controller.view_button_event), 0);
+
+  session->signals.view_button_press_event =
+      g_signal_connect(G_OBJECT(session->controller.view_button_event), "pressed",
+                       G_CALLBACK(girara_callback_view_button_press_event), session);
 
   session->signals.view_button_release_event =
-      g_signal_connect(G_OBJECT(session->gtk.view), "button-release-event",
+      g_signal_connect(G_OBJECT(session->controller.view_button_event), "released",
                        G_CALLBACK(girara_callback_view_button_release_event), session);
 
-  session->signals.view_motion_notify_event =
-      g_signal_connect(G_OBJECT(session->gtk.view), "motion-notify-event",
-                       G_CALLBACK(girara_callback_view_button_motion_notify_event), session);
+  session->controller.view_motion_event     = gtk_event_controller_motion_new(session->gtk.view);
+  session->signals.view_motion_notify_event = g_signal_connect(
+      G_OBJECT(session->gtk.view), "motion", G_CALLBACK(girara_callback_view_button_motion_notify_event), session);
 
-  session->signals.view_scroll_event = g_signal_connect(G_OBJECT(session->gtk.view), "scroll-event",
+  session->controller.view_scroll_event =
+      gtk_event_controller_scroll_new(session->gtk.view, GTK_EVENT_CONTROLLER_SCROLL_BOTH_AXES);
+  session->signals.view_scroll_event = g_signal_connect(G_OBJECT(session->controller.view_scroll_event), "scroll",
                                                         G_CALLBACK(girara_callback_view_scroll_event), session);
 
   /* statusbar */
   gtk_container_add(GTK_CONTAINER(session->gtk.statusbar), GTK_WIDGET(session->gtk.statusbar_entries));
 
   /* notification area */
-  g_signal_connect(G_OBJECT(session->gtk.notification_area), "key-press-event",
+  session->controller.notification_key_event = gtk_event_controller_key_new(session->gtk.notification_area);
+  g_signal_connect(session->controller.notification_key_event, "key-pressed",
                    G_CALLBACK(girara_callback_view_key_press_event), session);
   gtk_container_add(GTK_CONTAINER(session->gtk.notification_area), session->gtk.notification_text);
   gtk_widget_set_halign(session->gtk.notification_text, GTK_ALIGN_START);
@@ -387,8 +397,9 @@ bool girara_session_init(girara_session_t* session, const char* sessionname) {
   widget_add_class(session->gtk.notification_text, "bottom_box");
   widget_add_class(GTK_WIDGET(session->gtk.statusbar_entries), "bottom_box");
 
+  session->controller.inputbar_key_event = gtk_event_controller_key_new(GTK_WIDGET(session->gtk.inputbar_entry));
   session->signals.inputbar_key_pressed =
-      g_signal_connect(G_OBJECT(session->gtk.inputbar_entry), "key-press-event",
+      g_signal_connect(session->controller.inputbar_key_event, "key-pressed",
                        G_CALLBACK(girara_callback_inputbar_key_press_event), session);
 
   session->signals.inputbar_changed = g_signal_connect(G_OBJECT(session->gtk.inputbar_entry), "changed",

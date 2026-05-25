@@ -26,8 +26,8 @@ static gboolean cb_marks_view_key_press_event_add(GtkWidget* UNUSED(widget), Gdk
   zathura_t* zathura = session->global.data;
 
   /* reset signal handler */
-  g_signal_handler_disconnect(G_OBJECT(session->gtk.view), session->signals.view_key_pressed);
-  session->signals.view_key_pressed = g_signal_connect(G_OBJECT(session->gtk.view), "key-press-event",
+  g_signal_handler_disconnect(G_OBJECT(session->signals.view_event_controller), session->signals.view_key_pressed);
+  session->signals.view_key_pressed = g_signal_connect(G_OBJECT(session->signals.view_event_controller), "key-pressed",
                                                        G_CALLBACK(girara_callback_view_key_press_event), session);
 
   /* evaluate key */
@@ -50,8 +50,8 @@ static gboolean cb_marks_view_key_press_event_evaluate(GtkWidget* UNUSED(widget)
   zathura_t* zathura = session->global.data;
 
   /* reset signal handler */
-  g_signal_handler_disconnect(G_OBJECT(session->gtk.view), session->signals.view_key_pressed);
-  session->signals.view_key_pressed = g_signal_connect(G_OBJECT(session->gtk.view), "key-press-event",
+  g_signal_handler_disconnect(G_OBJECT(session->signals.view_event_controller), session->signals.view_key_pressed);
+  session->signals.view_key_pressed = g_signal_connect(G_OBJECT(session->signals.view_event_controller), "key-pressed",
                                                        G_CALLBACK(girara_callback_view_key_press_event), session);
 
   /* evaluate key */
@@ -71,8 +71,8 @@ bool sc_mark_add(girara_session_t* session, girara_argument_t* UNUSED(argument),
   g_return_val_if_fail(session->gtk.view != NULL, false);
 
   /* redirect signal handler */
-  g_signal_handler_disconnect(G_OBJECT(session->gtk.view), session->signals.view_key_pressed);
-  session->signals.view_key_pressed = g_signal_connect(G_OBJECT(session->gtk.view), "key-press-event",
+  g_signal_handler_disconnect(G_OBJECT(session->signals.view_event_controller), session->signals.view_key_pressed);
+  session->signals.view_key_pressed = g_signal_connect(G_OBJECT(session->signals.view_event_controller), "key-pressed",
                                                        G_CALLBACK(cb_marks_view_key_press_event_add), session);
 
   return true;
@@ -84,8 +84,8 @@ bool sc_mark_evaluate(girara_session_t* session, girara_argument_t* UNUSED(argum
   g_return_val_if_fail(session->gtk.view != NULL, false);
 
   /* redirect signal handler */
-  g_signal_handler_disconnect(G_OBJECT(session->gtk.view), session->signals.view_key_pressed);
-  session->signals.view_key_pressed = g_signal_connect(G_OBJECT(session->gtk.view), "key-press-event",
+  g_signal_handler_disconnect(G_OBJECT(session->signals.view_event_controller), session->signals.view_key_pressed);
+  session->signals.view_key_pressed = g_signal_connect(G_OBJECT(session->signals.view_event_controller), "key-pressed",
                                                        G_CALLBACK(cb_marks_view_key_press_event_evaluate), session);
 
   return true;

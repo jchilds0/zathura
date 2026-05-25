@@ -12,14 +12,16 @@
 #include <girara/log.h>
 #include <girara/utils.h>
 #include <glib/gi18n-lib.h>
-#include <string.h>
 
 static const guint ALL_ACCELS_MASK = GDK_CONTROL_MASK | GDK_SHIFT_MASK | GDK_MOD1_MASK;
 static const guint MOUSE_MASK      = GDK_CONTROL_MASK | GDK_SHIFT_MASK | GDK_MOD1_MASK | GDK_BUTTON1_MASK |
-                                GDK_BUTTON2_MASK | GDK_BUTTON3_MASK | GDK_BUTTON4_MASK | GDK_BUTTON5_MASK;
+                                     GDK_BUTTON2_MASK | GDK_BUTTON3_MASK | GDK_BUTTON4_MASK | GDK_BUTTON5_MASK;
 
-static bool clean_mask(GtkWidget* widget, guint hardware_keycode, GdkModifierType state, gint group, guint* clean,
+static bool clean_mask(GtkEventControllerKey* controller, guint hardware_keycode, GdkModifierType state, guint* clean,
                        guint* keyval) {
+  guint group = gtk_event_controller_key_get_group(controller);
+
+  GtkWidget* widget        = gtk_event_controller_get_widget(GTK_EVENT_CONTROLLER(controller));
   GdkDisplay* display      = gtk_widget_get_display(widget);
   GdkModifierType consumed = 0;
 
@@ -70,13 +72,15 @@ static bool clean_mask(GtkWidget* widget, guint hardware_keycode, GdkModifierTyp
 }
 
 /* callback implementation */
-gboolean girara_callback_view_key_press_event(GtkWidget* widget, GdkEventKey* event, girara_session_t* session) {
+gboolean girara_callback_view_key_press_event(GtkEventControllerKey* widget, guint UNUSED(hardware_keyval),
+                                              guint hardware_keycode, GdkModifierType state,
+                                              girara_session_t* session) {
   g_return_val_if_fail(session != NULL, FALSE);
 
   guint clean  = 0;
   guint keyval = 0;
 
-  if (clean_mask(widget, event->hardware_keycode, event->state, event->group, &clean, &keyval) == false) {
+  if (clean_mask(widget, hardware_keycode, state, &clean, &keyval) == false) {
     return false;
   }
 
@@ -210,15 +214,25 @@ gboolean girara_callback_view_key_press_event(GtkWidget* widget, GdkEventKey* ev
   return FALSE;
 }
 
-gboolean girara_callback_view_button_press_event(GtkWidget* UNUSED(widget), GdkEventButton* button,
+gboolean girara_callback_view_button_press_event(GtkGestureMultiPress* widget, gint UNUSED(n_press), gdouble x, gdouble y,
                                                  girara_session_t* session) {
   g_return_val_if_fail(session != NULL, false);
-  g_return_val_if_fail(button != NULL, false);
+
+  // GTK4: changes to gtk_event_controller_get_current_event(self)
+  GdkEvent* gtk_event = gtk_get_current_event();
+
+  // GTK4: changes to gdk_event_get_modifier_state(gtk_event)
+  GdkModifierType gtk_state;
+  gdk_event_get_state(gtk_event, &gtk_state);
+
+  GdkEventType type = gdk_event_get_event_type(gtk_event);
+  guint state       = gtk_state & MOUSE_MASK;
+  guint button      = gtk_gesture_single_get_current_button(GTK_GESTURE_SINGLE(widget));
 
   /* prepare girara event */
-  girara_event_t event = {.x = button->x, .y = button->y};
+  girara_event_t event = {.x = x, .y = y};
 
-  switch (button->type) {
+  switch (type) {
   case GDK_BUTTON_PRESS:
     event.type = GIRARA_EVENT_BUTTON_PRESS;
     break;
@@ -233,13 +247,12 @@ gboolean girara_callback_view_button_press_event(GtkWidget* UNUSED(widget), GdkE
     break;
   }
 
-  const guint state                         = button->state & MOUSE_MASK;
   girara_session_private_t* session_private = session->private_data;
 
   /* search registered mouse events */
   for (size_t idx = 0; idx != girara_list_size(session->bindings.mouse_events); ++idx) {
     girara_mouse_event_t* mouse_event = girara_list_nth(session->bindings.mouse_events, idx);
-    if (mouse_event->function != NULL && button->button == mouse_event->button && state == mouse_event->mask &&
+    if (mouse_event->function != NULL && button == mouse_event->button && state == mouse_event->mask &&
         mouse_event->event_type == event.type &&
         (session->modes.current_mode == mouse_event->mode || mouse_event->mode == 0)) {
       mouse_event->function(session, &mouse_event->argument, &event, session_private->buffer.n);
@@ -250,21 +263,28 @@ gboolean girara_callback_view_button_press_event(GtkWidget* UNUSED(widget), GdkE
   return false;
 }
 
-gboolean girara_callback_view_button_release_event(GtkWidget* UNUSED(widget), GdkEventButton* button,
-                                                   girara_session_t* session) {
+gboolean girara_callback_view_button_release_event(GtkGestureMultiPress* widget, gint UNUSED(n_press), gdouble x,
+                                                   gdouble y, girara_session_t* session) {
   g_return_val_if_fail(session != NULL, false);
-  g_return_val_if_fail(button != NULL, false);
+
+  // GTK4: changes to gtk_event_controller_get_current_event(self)
+  GdkEvent* gtk_event = gtk_get_current_event();
+
+  // GTK4: changes to gdk_event_get_modifier_state(gtk_event)
+  GdkModifierType gtk_state;
+  gdk_event_get_state(gtk_event, &gtk_state);
+
+  guint state  = gtk_state & MOUSE_MASK;
+  guint button = gtk_gesture_single_get_current_button(GTK_GESTURE_SINGLE(widget));
 
   /* prepare girara event */
-  girara_event_t event = {.type = GIRARA_EVENT_BUTTON_RELEASE, .x = button->x, .y = button->y};
-
-  const guint state                         = button->state & MOUSE_MASK;
+  girara_event_t event                      = {.type = GIRARA_EVENT_BUTTON_RELEASE, .x = x, .y = y};
   girara_session_private_t* session_private = session->private_data;
 
   /* search registered mouse events */
   for (size_t idx = 0; idx != girara_list_size(session->bindings.mouse_events); ++idx) {
     girara_mouse_event_t* mouse_event = girara_list_nth(session->bindings.mouse_events, idx);
-    if (mouse_event->function != NULL && button->button == mouse_event->button && state == mouse_event->mask &&
+    if (mouse_event->function != NULL && button == mouse_event->button && state == mouse_event->mask &&
         mouse_event->event_type == GIRARA_EVENT_BUTTON_RELEASE &&
         (session->modes.current_mode == mouse_event->mode || mouse_event->mode == 0)) {
       mouse_event->function(session, &(mouse_event->argument), &event, session_private->buffer.n);
@@ -275,15 +295,21 @@ gboolean girara_callback_view_button_release_event(GtkWidget* UNUSED(widget), Gd
   return false;
 }
 
-gboolean girara_callback_view_button_motion_notify_event(GtkWidget* UNUSED(widget), GdkEventMotion* button,
+gboolean girara_callback_view_button_motion_notify_event(GtkEventControllerMotion* UNUSED(widget), gdouble x, gdouble y,
                                                          girara_session_t* session) {
   g_return_val_if_fail(session != NULL, false);
-  g_return_val_if_fail(button != NULL, false);
 
   /* prepare girara event */
-  girara_event_t event = {.type = GIRARA_EVENT_MOTION_NOTIFY, .x = button->x, .y = button->y};
+  girara_event_t event = {.type = GIRARA_EVENT_MOTION_NOTIFY, .x = x, .y = y};
 
-  const guint state                         = button->state & MOUSE_MASK;
+  // GTK4: changes to gtk_event_controller_get_current_event(self)
+  GdkEvent* gtk_event = gtk_get_current_event();
+
+  // GTK4: changes to gdk_event_get_modifier_state(gtk_event)
+  GdkModifierType gtk_state;
+  gdk_event_get_state(gtk_event, &gtk_state);
+
+  const guint state                         = gtk_state & MOUSE_MASK;
   girara_session_private_t* session_private = session->private_data;
 
   /* search registered mouse events */
@@ -299,15 +325,22 @@ gboolean girara_callback_view_button_motion_notify_event(GtkWidget* UNUSED(widge
   return false;
 }
 
-gboolean girara_callback_view_scroll_event(GtkWidget* UNUSED(widget), GdkEventScroll* scroll,
-                                           girara_session_t* session) {
+gboolean girara_callback_view_scroll_event(GtkEventControllerScroll* UNUSED(widget), gdouble dx, gdouble dy, girara_session_t* session) {
   g_return_val_if_fail(session != NULL, false);
-  g_return_val_if_fail(scroll != NULL, false);
 
+  // GTK4: changes to gtk_event_controller_get_current_event(self)
+  GdkEvent* gtk_event = gtk_get_current_event();
+
+  // GTK4: changes to gdk_event_get_modifier_state(gtk_event)
+  GdkModifierType gtk_state;
+  gdk_event_get_state(gtk_event, &gtk_state);
+
+  // GTK4: changes to gdk_event_get_position(gtk_event, &event.x, &event.y)
   /* prepare girara event */
-  girara_event_t event = {.x = scroll->x, .y = scroll->y};
+  girara_event_t event = {.x = gtk_event->scroll.x, gtk_event->scroll.y};
 
-  switch (scroll->direction) {
+  // GTK4: changes to gdk_scroll_event_get_direction(gtk_event)
+  switch (gtk_event->scroll.direction) {
   case GDK_SCROLL_UP:
     event.type = GIRARA_EVENT_SCROLL_UP;
     break;
@@ -323,7 +356,8 @@ gboolean girara_callback_view_scroll_event(GtkWidget* UNUSED(widget), GdkEventSc
   case GDK_SCROLL_SMOOTH:
     event.type = GIRARA_EVENT_SCROLL_BIDIRECTIONAL;
     /* We abuse x and y here. We really need more fields in girara_event_t. */
-    gdk_event_get_scroll_deltas((GdkEvent*)scroll, &event.x, &event.y);
+    event.x = dx;
+    event.y = dy;
 #ifdef __APPLE__
     /* Apple has much higher deltas */
     event.x /= 50;
@@ -334,7 +368,7 @@ gboolean girara_callback_view_scroll_event(GtkWidget* UNUSED(widget), GdkEventSc
     return false;
   }
 
-  const guint state                         = scroll->state & MOUSE_MASK;
+  const guint state                         = gtk_state & MOUSE_MASK;
   girara_session_private_t* session_private = session->private_data;
 
   /* search registered mouse events */
@@ -416,14 +450,17 @@ gboolean girara_callback_inputbar_activate(GtkEntry* entry, girara_session_t* se
   return girara_command_run(session, input);
 }
 
-gboolean girara_callback_inputbar_key_press_event(GtkWidget* entry, GdkEventKey* event, girara_session_t* session) {
+gboolean girara_callback_inputbar_key_press_event(GtkEventControllerKey* self, guint hardware_keyval,
+                                                  guint hardware_keycode, GdkModifierType state,
+                                                  girara_session_t* session) {
   g_return_val_if_fail(session != NULL, false);
 
   /* a custom handler has been installed (e.g. by girara_dialog) */
   gboolean custom_ret = false;
   if (session->signals.inputbar_custom_key_press_event != NULL) {
     girara_debug("Running custom key press event handler.");
-    custom_ret = session->signals.inputbar_custom_key_press_event(entry, event, session->signals.inputbar_custom_data);
+    custom_ret = session->signals.inputbar_custom_key_press_event(self, hardware_keyval, hardware_keycode, state,
+                                                                  session->signals.inputbar_custom_data);
     if (custom_ret == true) {
       girara_isc_abort(session, NULL, NULL, 0);
 
@@ -436,7 +473,7 @@ gboolean girara_callback_inputbar_key_press_event(GtkWidget* entry, GdkEventKey*
 
   guint keyval = 0;
   guint clean  = 0;
-  if (clean_mask(entry, event->hardware_keycode, event->state, event->group, &clean, &keyval) == false) {
+  if (clean_mask(self, hardware_keycode, state, &clean, &keyval) == false) {
     girara_debug("clean_mask returned false.");
     return false;
   }
